@@ -1,0 +1,36 @@
+{
+  "name": "webext-store-incompat-fixer",
+  "version": "0.1.1",
+  "description": "Package which clones a packed webextension and fixes incompatibilities with certain extension stores",
+  "keywords": [
+    "webextension",
+    "extension",
+    "store",
+    "firefox",
+    "edge",
+    "whale"
+  ],
+  "homepage": "https://github.com/carlosjeurissen/webext-store-incompat-fixer#readme",
+  "bugs": {
+    "url": "https://github.com/carlosjeurissen/webext-store-incompat-fixer/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/carlosjeurissen/webext-store-incompat-fixer.git"
+  },
+  "license": "MIT",
+  "author": "Carlos Jeurissen",
+  "main": "index.js",
+  "bin": {
+    "webext-store-incompat-fixer": "./index.js"
+  },
+  "dependencies": {
+    "jszip": "^3.3.0"
+  },
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "devDependencies": {
+    "semistandard": "^14.2.0"
+  }
+}
