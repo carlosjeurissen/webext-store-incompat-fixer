@@ -14,9 +14,10 @@ function stringifyInOriginalFormat (originalString, newJson) {
   return JSON.stringify(newJson);
 }
 
-function handleEdgeLocaleExclusions (zip, manifestString, manifestJson) {
+function handleEdgeLocaleExclusions (zip, manifestString, manifestJson, params) {
   const defaultLocale = manifestJson.default_locale;
   const messagesMatch = manifestString.match(/__MSG_(.+?)__/g);
+
   let packageChanged = false;
 
   if (!defaultLocale || !messagesMatch) {
@@ -31,13 +32,16 @@ function handleEdgeLocaleExclusions (zip, manifestString, manifestJson) {
     return Promise.resolve(packageChanged);
   }
 
+  const forcedInclusions = Array.isArray(params.edgeLocaleInclusions) ? params.edgeLocaleInclusions : [];
+  forcedInclusions.push(defaultLocale);
+
   const updatePromises = [];
   const localeRegex = /^_locales\/(.+)\/messages\.json$/;
 
   zip.file(localeRegex).forEach(function (file) {
     const fileName = file.name;
     const localeId = fileName.match(localeRegex)[1];
-    if (localeId === defaultLocale) return;
+    if (forcedInclusions.includes(localeId)) return;
 
     const readPromise = file.async('string').then(function (result) {
       const localeJson = JSON.parse(result);
@@ -63,7 +67,7 @@ function handleEdgeLocaleExclusions (zip, manifestString, manifestJson) {
   });
 }
 
-function handleSinglePackage (data, store) {
+function handleSinglePackage (data, store, params) {
   let packageChanged = false;
   const zip = new JSZip();
 
@@ -146,7 +150,7 @@ function handleSinglePackage (data, store) {
     // to enter all store assets for each language
 
     if (store === 'edge') {
-      return handleEdgeLocaleExclusions(zip, manifestString, manifestJson).then(function (changed) {
+      return handleEdgeLocaleExclusions(zip, manifestString, manifestJson, params).then(function (changed) {
         if (changed) {
           packageChanged = true;
         }
@@ -192,49 +196,47 @@ function writeZipToDisk (zip, outputPath) {
   });
 }
 
-function generate (params, cli) {
+function generate (params) {
   const stores = cleanStoreInput(params.stores);
   const version = process.env.npm_package_version;
   const inputPath = params.inputPath.replace('{version}', version);
   return readSingleFile(inputPath).then(function (data) {
     return Promise.all(stores.map(function (store) {
-      return handleSinglePackage(data, store).then(function (zip) {
+      return handleSinglePackage(data, store, params).then(function (zip) {
         if (zip) {
           const outputPath = inputPath.replace('.zip', '-' + store + '.zip');
-          if (cli) {
-            console.log(store + ' - writing adapted package');
-          }
+          console.log(store + ' - writing adapted package');
           return writeZipToDisk(zip, outputPath);
         }
-        if (cli) {
-          console.log(store + ' - no adaptions needed');
-        }
+        console.log(store + ' - no adaptions needed');
       });
     }));
   }).then(function () {
-    if (cli) {
-      console.log('\nHandled store incompatibilities');
-      process.exit();
-    }
+    console.log('\nHandled store incompatibilities');
   });
 }
 
-const argList = process.argv.join('=').split('=');
-if (argList.length > 2) {
+var usedAsCli = process.argv[1].endsWith('/webext-store-incompat-fixer');
+if (usedAsCli) {
+  const argList = process.argv.join('=').split('=');
   let inputPath = null;
+  let edgeLocaleInclusions = null;
   const stores = [];
   argList.forEach((item, index) => {
     if (item === '--input' || item === '-i') {
       inputPath = argList[index + 1];
     } else if (item === '--stores' || item === '--store' || item === '-s') {
       stores.push(...argList[index + 1].toLowerCase().split(/[^a-z]/));
+    } else if (item === '--edge-locale-inclusions') {
+      edgeLocaleInclusions = argList[index + 1].split(',');
     }
   });
 
   generate({
     inputPath: inputPath,
-    stores: stores
-  }, true);
+    stores: stores,
+    edgeLocaleInclusions: edgeLocaleInclusions
+  });
 }
 
 exports.generate = generate;

@@ -41,6 +41,8 @@ The microsoft edge store currently requires store assets for each language inclu
 
 To overcome this, we make use of the language detection system of the edge store. It will only ask for additional assets if there is a translation for items found in the manifest file. Thus we simply remove those translations and keep others.
 
+To force include a certain language, use the --edge-locale-inclusions option with a comma separated list of locales.
+
 Microsoft confirmed this issue will be fixed at some point. Once they have, this adaption will be removed.
 
 
