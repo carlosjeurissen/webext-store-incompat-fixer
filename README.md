@@ -30,7 +30,7 @@ https://github.com/mozilla/addons-linter/issues/2847
 https://github.com/mozilla/addons-linter/issues/3060
 
 In addition, the content security policy is modified in two ways.
-1) we remove report-sample from script-src as it breaks the csp
+1) we remove report-sample and strict-dynamic from script-src as it breaks the csp
 https://bugzilla.mozilla.org/show_bug.cgi?id=1618141
 
 2) if an inline options page is used, we add the about: protocol to frame-ancestors. This makes sure the options page can be rendered in firefox android, and in older firefox versions.

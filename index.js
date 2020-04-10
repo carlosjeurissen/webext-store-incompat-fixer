@@ -129,6 +129,12 @@ function handleSinglePackage (data, store, params) {
           csp = csp.replace(/ 'report-sample'/g, '');
           manifestJson.content_security_policy = csp;
         }
+
+        if (csp.includes(' \'strict-dynamic\'')) {
+          manifestChanged = true;
+          csp = csp.replace(/ 'strict-dynamic'/g, '');
+          manifestJson.content_security_policy = csp;
+        }
       }
 
       // remove management from optional permissions
