@@ -4,6 +4,9 @@
 const fs = require('fs');
 const JSZip = require('jszip');
 
+const executionPath = process.argv[1].replace(/\\+/g, '/');
+const usedAsCli = executionPath.endsWith('/webext-store-incompat-fixer') || executionPath.endsWith('/webext-store-incompat-fixer/index.js');
+
 function stringifyInOriginalFormat (originalString, newJson) {
   if (originalString.indexOf('\t') !== -1) {
     return JSON.stringify(newJson, '\t', 1);
@@ -222,7 +225,6 @@ function generate (params) {
   });
 }
 
-var usedAsCli = process.argv[1].endsWith('/webext-store-incompat-fixer');
 if (usedAsCli) {
   const argList = process.argv.join('=').split('=');
   let inputPath = null;
