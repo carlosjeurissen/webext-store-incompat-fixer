@@ -58,11 +58,7 @@ function handleEdgeLocaleExclusions (zip, manifestString, manifestJson, params) 
       if (messageFound) {
         packageChanged = true;
         const localeString = stringifyInOriginalFormat(result, localeJson);
-        if (localeString === '{}') {
-          zip.remove('_locales/' + localeId);
-        } else {
-          zip.file(fileName, localeString);
-        }
+        zip.file(fileName, localeString);
       }
     });
 
