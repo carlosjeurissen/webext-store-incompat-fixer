@@ -205,9 +205,25 @@ function writeZipToDisk (zip, outputPath) {
   });
 }
 
+function readJsonFile (filePath) {
+  try {
+    const fileText = fs.readFileSync(filePath);
+    return JSON.parse(fileText);
+  } catch (e) {
+    console.log('Couldn\'t read json file: ' + e);
+  }
+}
+
+function getVersion () {
+  const version = process.env.npm_package_version;
+  if (version) return version;
+  const packageJson = readJsonFile('./package.json') || {};
+  return packageJson.version || 'unknown';
+}
+
 function generate (params) {
   const stores = cleanStoreInput(params.stores);
-  const version = process.env.npm_package_version;
+  const version = getVersion();
   const inputPath = params.inputPath.replace('{version}', version);
   return readSingleFile(inputPath).then(function (data) {
     return Promise.all(stores.map(function (store) {

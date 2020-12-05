@@ -1,6 +1,6 @@
 {
   "name": "webext-store-incompat-fixer",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Package which clones a packed webextension and fixes incompatibilities with certain extension stores",
   "keywords": [
     "webextension",
@@ -22,7 +22,7 @@
   "author": "Carlos Jeurissen",
   "main": "index.js",
   "bin": {
-    "webext-store-incompat-fixer": "./index.js"
+    "webext-store-incompat-fixer": "index.js"
   },
   "dependencies": {
     "jszip": "~3.5.0"
