@@ -120,37 +120,45 @@ function handleSinglePackage (data, store, params) {
       }
     }
 
-    if (store === 'firefox') {
-      const originalCsp = manifestJson.content_security_policy;
-      let csp = originalCsp;
-
-      if (typeof csp === 'string') {
+    if (store === 'safari' || store === 'firefox') {
+      const originalCsp = manifestJson.content_security_policy || '';
+      if (originalCsp) {
         const optionsUi = manifestJson.options_ui;
+        const inlineOptionsUi = optionsUi && !optionsUi.external;
+        let cspChanged = false;
+        let newCsp = originalCsp.split(/,+ ?/).map((singleCsp) => {
+          return singleCsp.split(/;+ ?/).filter((part) => {
+            if (store !== 'safari' || !part.startsWith('sandbox')) return true;
+            packageChanges.push('CSP: Sandbox removed, breaks styles');
+            cspChanged = true;
+          }).map((part) => {
+            if (store !== 'firefox') return part;
+            if (!inlineOptionsUi) return part;
+            if (!part.startsWith('frame-ancestors')) return part;
+            if ((part + ' ').includes(' about: ')) return part;
+            packageChanges.push('CSP: added about: to frame-ancestors to fix the inline options page in firefox ESR');
+            cspChanged = true;
+            return part + ' about:';
+          });
+        }).join(', ');
 
-        // makes sure the options page can be embedded in the firefox UI
-        if (
-          optionsUi &&
-          !optionsUi.external &&
-          csp.indexOf('frame-ancestors ') !== -1 &&
-          !csp.split('frame-ancestors ')[1].split(';')[0].split(',')[0].includes('about:')
-        ) {
-          csp = csp.replace('frame-ancestors ', 'frame-ancestors about: ');
-          packageChanges.push('CSP: added about: to frame-ancestors');
+        if (store === 'firefox') {
+          if (newCsp.includes(' \'report-sample\'')) {
+            cspChanged = true;
+            newCsp = newCsp.replace(/ 'report-sample'/g, '');
+            packageChanges.push('CSP: removed \'report-sample\'. see: https://bugzilla.mozilla.org/show_bug.cgi?id=1618141');
+          }
+
+          if (newCsp.includes(' \'strict-dynamic\'')) {
+            cspChanged = true;
+            newCsp = newCsp.replace(/ 'strict-dynamic'/g, '');
+            packageChanges.push('CSP: removed \'strict-dynamic\'. see: https://bugzilla.mozilla.org/show_bug.cgi?id=1618141');
+          }
         }
 
-        if (csp.includes(' \'report-sample\'')) {
-          csp = csp.replace(/ 'report-sample'/g, '');
-          packageChanges.push('CSP: removed \'report-sample\'. see: https://bugzilla.mozilla.org/show_bug.cgi?id=1618141');
-        }
-
-        if (csp.includes(' \'strict-dynamic\'')) {
-          csp = csp.replace(/ 'strict-dynamic'/g, '');
-          packageChanges.push('CSP: removed \'strict-dynamic\'. see: https://bugzilla.mozilla.org/show_bug.cgi?id=1618141');
-        }
-
-        if (originalCsp !== csp) {
+        if (cspChanged) {
+          manifestJson.content_security_policy = newCsp;
           manifestChanged = true;
-          manifestJson.content_security_policy = csp;
         }
       }
     }
