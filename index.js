@@ -7,6 +7,12 @@ const JSZip = require('jszip');
 const executionPath = process.argv[1].replace(/\\+/g, '/');
 const usedAsCli = executionPath.endsWith('/webext-store-incompat-fixer') || executionPath.endsWith('/webext-store-incompat-fixer/index.js');
 
+const storeTheming = {
+  firefox: '\x1b[31m',
+  whale: '\x1b[36m',
+  edge: '\x1b[32m'
+};
+
 function stringifyInOriginalFormat (originalString, newJson) {
   if (originalString.indexOf('\t') !== -1) {
     return JSON.stringify(newJson, '\t', 1);
@@ -21,10 +27,10 @@ function handleEdgeLocaleExclusions (zip, manifestString, manifestJson, params) 
   const defaultLocale = manifestJson.default_locale;
   const messagesMatch = manifestString.match(/__MSG_(.+?)__/g);
 
-  let packageChanged = false;
+  let changed = false;
 
   if (!defaultLocale || !messagesMatch) {
-    return Promise.resolve(packageChanged);
+    return Promise.resolve(changed);
   }
 
   const messagesToRemove = messagesMatch.map(function (item) {
@@ -32,7 +38,7 @@ function handleEdgeLocaleExclusions (zip, manifestString, manifestJson, params) 
   });
 
   if (messagesToRemove.length === 0) {
-    return Promise.resolve(packageChanged);
+    return Promise.resolve(changed);
   }
 
   const forcedInclusions = Array.isArray(params.edgeLocaleInclusions) ? params.edgeLocaleInclusions : [];
@@ -56,7 +62,7 @@ function handleEdgeLocaleExclusions (zip, manifestString, manifestJson, params) 
         }
       });
       if (messageFound) {
-        packageChanged = true;
+        changed = true;
         const localeString = stringifyInOriginalFormat(result, localeJson);
         zip.file(fileName, localeString);
       }
@@ -66,12 +72,13 @@ function handleEdgeLocaleExclusions (zip, manifestString, manifestJson, params) 
   });
 
   return Promise.all(updatePromises).then(function () {
-    return packageChanged;
+    return changed;
   });
 }
 
 function handleSinglePackage (data, store, params) {
-  let packageChanged = false;
+  const packageChanges = [];
+
   const zip = new JSZip();
 
   return zip.loadAsync(data).then(function () {
@@ -94,11 +101,13 @@ function handleSinglePackage (data, store, params) {
         const fallbackLocaleId = fallbacks[localeId];
         const fallbackName = '_locales/' + fallbackLocaleId + '/messages.json';
         const fallbackFile = zip.file(fallbackName);
-        if (!fallbackFile) {
+        if (fallbackFile) {
+          packageChanges.push('Removed ' + localeId + ' from package');
+        } else {
+          packageChanges.push('Renamed ' + localeId + ' translations to ' + fallbackLocaleId);
           zip.file(fallbackName, file.async('uint8array'));
         }
         zip.remove('_locales/' + localeId);
-        packageChanged = true;
       });
 
       // remove tm symbol if found, as the store doesn't render it correctly
@@ -106,11 +115,13 @@ function handleSinglePackage (data, store, params) {
       if (hasTmSymbol) {
         manifestJson.name = manifestJson.name.replace(/™/g, '');
         manifestChanged = true;
+        packageChanges.push('Removed ™ symbol from name');
       }
     }
 
     if (store === 'firefox') {
-      let csp = manifestJson.content_security_policy;
+      const originalCsp = manifestJson.content_security_policy;
+      let csp = originalCsp;
 
       if (typeof csp === 'string') {
         const optionsUi = manifestJson.options_ui;
@@ -122,20 +133,22 @@ function handleSinglePackage (data, store, params) {
           csp.indexOf('frame-ancestors ') !== -1 &&
           !csp.split('frame-ancestors ')[1].split(';')[0].split(',')[0].includes('about:')
         ) {
-          manifestChanged = true;
           csp = csp.replace('frame-ancestors ', 'frame-ancestors about: ');
-          manifestJson.content_security_policy = csp;
+          packageChanges.push('CSP: added about: to frame-ancestors');
         }
 
         if (csp.includes(' \'report-sample\'')) {
-          manifestChanged = true;
           csp = csp.replace(/ 'report-sample'/g, '');
-          manifestJson.content_security_policy = csp;
+          packageChanges.push('CSP: removed \'report-sample\'. see: https://bugzilla.mozilla.org/show_bug.cgi?id=1618141');
         }
 
         if (csp.includes(' \'strict-dynamic\'')) {
-          manifestChanged = true;
           csp = csp.replace(/ 'strict-dynamic'/g, '');
+          packageChanges.push('CSP: removed \'strict-dynamic\'. see: https://bugzilla.mozilla.org/show_bug.cgi?id=1618141');
+        }
+
+        if (originalCsp !== csp) {
+          manifestChanged = true;
           manifestJson.content_security_policy = csp;
         }
       }
@@ -145,11 +158,11 @@ function handleSinglePackage (data, store, params) {
       if (Array.isArray(optionalPermissions) && optionalPermissions.includes('management')) {
         manifestChanged = true;
         optionalPermissions.splice(optionalPermissions.indexOf('management'), 1);
+        packageChanges.push('Removed optional management permission. see: https://github.com/mozilla/addons-linter/issues/3060');
       }
     }
 
     if (manifestChanged) {
-      packageChanged = true;
       const manifestFinal = stringifyInOriginalFormat(manifestString, manifestJson);
       zip.file('manifest.json', manifestFinal);
     }
@@ -161,13 +174,13 @@ function handleSinglePackage (data, store, params) {
     if (store === 'edge') {
       return handleEdgeLocaleExclusions(zip, manifestString, manifestJson, params).then(function (changed) {
         if (changed) {
-          packageChanged = true;
+          packageChanges.push('Removed translations for messages in manifest.json');
         }
       });
     }
   }).then(function () {
-    if (packageChanged) {
-      return zip;
+    if (packageChanges.length > 0) {
+      return { zip, packageChanges };
     }
   });
 }
@@ -227,13 +240,21 @@ function generate (params) {
   const inputPath = params.inputPath.replace('{version}', version);
   return readSingleFile(inputPath).then(function (data) {
     return Promise.all(stores.map(function (store) {
-      return handleSinglePackage(data, store, params).then(function (zip) {
-        if (zip) {
+      return handleSinglePackage(data, store, params).then(function (result) {
+        const fancyStoreName = store.toUpperCase();
+        const colorReset = '\x1b[0m';
+        console.log('\x1b[1m\n' + storeTheming[store] + fancyStoreName + colorReset);
+
+        if (result) {
+          const { zip, packageChanges } = result;
           const outputPath = inputPath.replace('.zip', '-' + store + '.zip');
-          console.log(store + ' - writing adapted package');
+          packageChanges.forEach(function (changeMessage) {
+            console.log('- ' + changeMessage);
+          });
           return writeZipToDisk(zip, outputPath);
+        } else {
+          console.log('\x1b[2m- No adaptions needed\x1b[0m');
         }
-        console.log(store + ' - no adaptions needed');
       });
     }));
   }).then(function () {

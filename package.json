@@ -1,6 +1,6 @@
 {
   "name": "webext-store-incompat-fixer",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Package which clones a packed webextension and fixes incompatibilities with certain extension stores",
   "keywords": [
     "webextension",
