@@ -152,14 +152,6 @@ function handleSinglePackage (data, store, params) {
           manifestJson.content_security_policy = csp;
         }
       }
-
-      // remove management from optional permissions
-      const optionalPermissions = manifestJson.optional_permissions;
-      if (Array.isArray(optionalPermissions) && optionalPermissions.includes('management')) {
-        manifestChanged = true;
-        optionalPermissions.splice(optionalPermissions.indexOf('management'), 1);
-        packageChanges.push('Removed optional management permission. see: https://github.com/mozilla/addons-linter/issues/3060');
-      }
     }
 
     if (manifestChanged) {
