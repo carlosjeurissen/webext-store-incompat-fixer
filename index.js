@@ -10,7 +10,8 @@ const usedAsCli = executionPath.endsWith('/webext-store-incompat-fixer') || exec
 const storeTheming = {
   firefox: '\x1b[31m',
   whale: '\x1b[36m',
-  edge: '\x1b[32m'
+  edge: '\x1b[32m',
+  safari: '\x1b[34m'
 };
 
 function stringifyInOriginalFormat (originalString, newJson) {
@@ -178,7 +179,7 @@ function handleSinglePackage (data, store, params) {
 }
 
 function cleanStoreInput (inputStores) {
-  const supportedStores = ['firefox', 'edge', 'whale'];
+  const supportedStores = ['firefox', 'edge', 'whale', 'safari'];
   if (!Array.isArray(inputStores) || inputStores.length === 0) return supportedStores;
   return supportedStores.filter(function (store) {
     return inputStores.includes(store);
