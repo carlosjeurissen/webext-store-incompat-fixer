@@ -139,7 +139,7 @@ function handleSinglePackage (data, store, params) {
             packageChanges.push('CSP: added about: to frame-ancestors to fix the inline options page in firefox ESR');
             cspChanged = true;
             return part + ' about:';
-          });
+          }).join('; ');
         }).join(', ');
 
         if (store === 'firefox') {
