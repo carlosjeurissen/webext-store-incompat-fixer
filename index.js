@@ -131,6 +131,7 @@ function handleSinglePackage (data, store, params) {
             if (store !== 'safari' || !part.startsWith('sandbox')) return true;
             packageChanges.push('CSP: Sandbox removed, breaks styles');
             cspChanged = true;
+            return false;
           }).map((part) => {
             if (store !== 'firefox') return part;
             if (!inlineOptionsUi) return part;
