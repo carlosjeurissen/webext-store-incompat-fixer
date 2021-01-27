@@ -24,11 +24,6 @@ The adaptions are mostly needed because of issues in the store. This means once 
 
 
 ## firefox adaptions
-The management permission is currently not accepted as optional permission. Thus we remove the permission.
-https://bugzilla.mozilla.org/show_bug.cgi?id=1618137
-https://github.com/mozilla/addons-linter/issues/2847
-https://github.com/mozilla/addons-linter/issues/3060
-
 In addition, the content security policy is modified in two ways.
 1) we remove report-sample and strict-dynamic from script-src as it breaks the csp
 https://bugzilla.mozilla.org/show_bug.cgi?id=1618141
@@ -55,3 +50,7 @@ The Whale team mentioned they won't fix the language issue however they are curr
 
 A forum post about the issues can be found here:
 https://forum.whale.naver.com/topic/27841/
+
+
+## safari adaptions
+The sandbox directive is removed from the content_security_policy field.

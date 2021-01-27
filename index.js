@@ -93,10 +93,11 @@ function handleSinglePackage (data, store, params) {
       // handle incompatible locale files
       const fallbacks = {
         zh_Hans: 'zh_CN',
-        zh_Hant: 'zh_TW'
+        zh_Hant: 'zh_TW',
+        sr_Latn: 'sr'
       };
 
-      const incompatLocaleMatch = /^_locales\/(zh_Hans|zh_Hant)\/messages\.json$/;
+      const incompatLocaleMatch = /^_locales\/(zh_Hans|zh_Hant|sr_Latn)\/messages\.json$/;
       zip.file(incompatLocaleMatch).forEach(function (file) {
         const localeId = file.name.match(incompatLocaleMatch)[1];
         const fallbackLocaleId = fallbacks[localeId];
