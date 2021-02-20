@@ -250,7 +250,7 @@ function generate (params) {
 
         if (result) {
           const { zip, packageChanges } = result;
-          const outputPath = inputPath.replace('.zip', '-' + store + '.zip');
+          const outputPath = inputPath.replace('.zip', '__adapted_for_' + store + '.zip');
           packageChanges.forEach(function (changeMessage) {
             console.log('- ' + changeMessage);
           });
